@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数独爱心游戏</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #ffeef8 0%, #fff0f5 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 20px;
+            transition: transform 0.1s ease;
+        }
+        body.shake {
+            animation: bodyShake 0.3s ease;
+        }
+        @keyframes bodyShake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        h1 { color: #d63384; margin-bottom: 10px; font-size: 28px; }
+        .subtitle { color: #c2185b; margin-bottom: 15px; font-size: 14px; }
+        .health-bar-container {
+            width: 400px;
+            background: #fff;
+            padding: 15px 20px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(214,51,132,0.15);
+            margin-bottom: 20px;
+            transition: transform 0.1s ease;
+        }
+        .health-bar-container.shake {
+            animation: healthBarShake 0.3s ease;
+        }
+        @keyframes healthBarShake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px) rotate(-1deg); }
+            40% { transform: translateX(8px) rotate(1deg); }
+            60% { transform: translateX(-6px) rotate(-0.5deg); }
+            80% { transform: translateX(6px) rotate(0.5deg); }
+        }
+        .health-bar-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #d63384;
+        }
+        .health-bar-bg {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 3px solid #c2185b;
+        }
+        .health-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b9d 0%, #e83e8c 100%);
+            border-radius: 12px;
+            transition: width 0.3s ease;
+            width: 100%;
+        }
+        .health-bar-fill.low {
+            background: linear-gradient(90deg, #ffcc00 0%, #ff9900 100%);
+        }
+        .health-bar-fill.critical {
+            background: linear-gradient(90deg, #ff4444 0%, #cc0000 100%);
+            animation: pulse 0.5s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .main-container { display: flex; gap: 40px; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+        .heart-container { background: #fff; padding: 25px; border-radius: 20px; box-shadow: 0 10px 40px rgba(214,51,132,0.2); }
+        .heart-grid { display: grid; grid-template-columns: repeat(9, 35px); grid-template-rows: repeat(9, 35px); gap: 2px; background: #ffeef8; padding: 8px; border-radius: 10px; }
+        .heart-pixel { width: 35px; height: 35px; border-radius: 4px; transition: all 0.3s ease; }
+        .heart-pixel-empty { background: transparent; }
+        .heart-pixel-gray { background: #c4c4c4; box-shadow: inset 0 -3px 0 #a0a0a0; }
+        .heart-pixel-pink-dark { background: #e83e8c; box-shadow: inset 0 -3px 0 #c2185b; }
+        .heart-pixel-pink-main { background: #ff6b9d; box-shadow: inset 0 -3px 0 #e83e8c; }
+        .heart-pixel-pink-light { background: #ff9ec4; box-shadow: inset 0 -3px 0 #ff6b9d; }
+        .heart-pixel-white { background: #ffffff; box-shadow: inset 0 -3px 0 #ffeef8; }
+        .sudoku-container { background: #fff; padding: 25px; border-radius: 20px; box-shadow: 0 10px 40px rgba(214,51,132,0.2); }
+        .sudoku-grid { display: grid; grid-template-columns: repeat(9, 45px); grid-template-rows: repeat(9, 45px); gap: 1px; background: #333; padding: 3px; border-radius: 8px; }
+        .sudoku-cell { width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; background: #fff; cursor: pointer; transition: all 0.15s ease; user-select: none; }
+        .sudoku-cell:hover { background: #fff0f5; }
+        .sudoku-cell.selected { background: #ffd1e3; box-shadow: inset 0 0 0 2px #e83e8c; }
+        .sudoku-cell.fixed { color: #333; cursor: default; background: #f8f9fa; }
+        .sudoku-cell.user-input { color: #d63384; }
+        .sudoku-cell.wrong { background: #ffe0e0; color: #dc3545; }
+        .sudoku-cell.correct { background: #e8f5e9; }
+        .sudoku-cell:nth-child(3n) { border-right: 2px solid #333; }
+        .sudoku-cell:nth-child(9n) { border-right: none; }
+        .sudoku-cell:nth-child(n+19):nth-child(-n+27), .sudoku-cell:nth-child(n+46):nth-child(-n+54) { border-bottom: 2px solid #333; }
+        .number-pad { display: flex; gap: 8px; margin-top: 20px; justify-content: center; }
+        .num-btn { width: 40px; height: 40px; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; background: linear-gradient(135deg, #ff6b9d 0%, #e83e8c 100%); color: white; transition: all 0.2s ease; }
+        .num-btn:hover { transform: scale(1.1); box-shadow: 0 4px 12px rgba(214,51,132,0.4); }
+        .num-btn:active { transform: scale(1.05); }
+        .controls { display: flex; gap: 15px; margin-top: 20px; justify-content: center; }
+        .control-btn { padding: 12px 25px; border: none; border-radius: 25px; font-size: 14px; font-weight: bold; cursor: pointer; transition: all 0.3s ease; }
+        .new-game-btn { background: linear-gradient(135deg, #ff6b9d 0%, #e83e8c 100%); color: white; box-shadow: 0 5px 15px rgba(214,51,132,0.3); }
+        .new-game-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(214,51,132,0.4); }
+        .clear-btn { background: #f8f9fa; color: #666; border: 2px solid #e0e0e0; }
+        .clear-btn:hover { background: #e9ecef; }
+        .progress { background: #fff; padding: 12px 25px; border-radius: 15px; box-shadow: 0 5px 20px rgba(214,51,132,0.15); margin-bottom: 20px; font-size: 15px; color: #d63384; font-weight: bold; }
+        .success-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%) scale(0.5); background: linear-gradient(135deg, #ff6b9d 0%, #e83e8c 100%); color: white; padding: 40px 50px; border-radius: 20px; box-shadow: 0 20px 60px rgba(214,51,132,0.5); font-size: 26px; font-weight: bold; z-index: 1000; opacity: 0; transition: all 0.5s cubic-bezier(0.68,-0.55,0.265,1.55); text-align: center; }
+        .success-modal.show { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+        .success-modal .emoji { font-size: 40px; display: block; margin-bottom: 15px; }
+        .game-over-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        .game-over-modal.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        .game-over-content {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            padding: 50px 60px;
+            border-radius: 20px;
+            text-align: center;
+            cursor: pointer;
+            transform: scale(0.8);
+            transition: transform 0.3s ease;
+        }
+        .game-over-modal.show .game-over-content {
+            transform: scale(1);
+        }
+        .game-over-content:hover {
+            transform: scale(1.02);
+        }
+        .game-over-title {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .game-over-subtitle {
+            font-size: 18px;
+            opacity: 0.9;
+        }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+        .overlay.show { opacity: 1; pointer-events: auto; }
+        .victory-text {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            font-size: 48px;
+            font-weight: bold;
+            background: linear-gradient(45deg, #ffd700, #ffed4a, #ffd700, #ff9500, #ffd700);
+            background-size: 300% 300%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            animation: goldGradient 2s ease infinite, victoryPop 0.5s ease-out;
+            z-index: 3000;
+            cursor: pointer;
+            opacity: 0;
+            transform: scale(0.5);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        .victory-text.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+        @keyframes goldGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        @keyframes victoryPop {
+            0% { transform: scale(0.3); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body id="gameBody">
+    <div class="overlay" id="overlay"></div>
+    <div class="success-modal" id="successModal">
+        <span class="emoji">🎉💖</span>
+        恭喜宝宝完成挑战！<br>爱心已完整呈现！
+    </div>
+    <div class="game-over-modal" id="gameOverModal">
+        <div class="game-over-content" id="gameOverContent">
+            <div class="game-over-title">GAME OVER</div>
+            <div class="game-over-subtitle">点击任意位置重新开始</div>
+        </div>
+    </div>
+    <div class="victory-text" id="victoryText">给我擦皮鞋</div>
+    <h1>💖 数独爱心游戏</h1>
+    <p class="subtitle">完成数独，点亮爱心！</p>
+    <div class="health-bar-container" id="healthBarContainer">
+        <div class="health-bar-label">
+            <span>❤️ 生命值</span>
+            <span id="healthText">300 / 300</span>
+        </div>
+        <div class="health-bar-bg">
+            <div class="health-bar-fill" id="healthBarFill"></div>
+        </div>
+    </div>
+    <div class="progress">进度: <span id="progressCount">0</span> / 49</div>
+    <div class="main-container">
+        <div class="heart-container">
+            <h3 style="color:#d63384;margin-bottom:15px;text-align:center;">爱心碎片</h3>
+            <div class="heart-grid" id="heartGrid"></div>
+        </div>
+        <div class="sudoku-container">
+            <h3 style="color:#d63384;margin-bottom:15px;text-align:center;">数独游戏</h3>
+            <div class="sudoku-grid" id="sudokuGrid"></div>
+            <div class="number-pad">
+                <button class="num-btn" data-num="1">1</button>
+                <button class="num-btn" data-num="2">2</button>
+                <button class="num-btn" data-num="3">3</button>
+                <button class="num-btn" data-num="4">4</button>
+                <button class="num-btn" data-num="5">5</button>
+                <button class="num-btn" data-num="6">6</button>
+                <button class="num-btn" data-num="7">7</button>
+                <button class="num-btn" data-num="8">8</button>
+                <button class="num-btn" data-num="9">9</button>
+            </div>
+            <div class="controls">
+                <button class="control-btn clear-btn" id="clearBtn">🗑️ 清除</button>
+                <button class="control-btn new-game-btn" id="newGameBtn">🎮 新游戏</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        const heartLayout = [
+            [0,0,1,1,0,1,1,0,0], [0,1,2,2,1,2,2,1,0], [1,2,3,3,2,3,3,2,1],
+            [1,2,3,4,3,4,3,2,1], [1,2,3,3,3,3,3,2,1], [0,1,2,3,3,3,2,1,0],
+            [0,0,1,2,3,2,1,0,0], [0,0,0,1,2,1,0,0,0], [0,0,0,0,1,0,0,0,0]
+        ];
+        const heartColorClasses = {0:'heart-pixel-empty',1:'heart-pixel-pink-dark',2:'heart-pixel-pink-main',3:'heart-pixel-pink-light',4:'heart-pixel-white'};
+        const MAX_HEALTH = 300;
+        const HEALTH_WRONG_PENALTY = 10;
+        const HEALTH_CORRECT_BONUS = 5;
+        const HEALTH_DECAY_RATE = 1;
+        
+        let heartPixels = [], heartMapping = [], selectedCell = null, sudokuBoard = [], solutionBoard = [], fixedCells = [], userInputs = [], correctCount = 0, isComplete = false;
+        let health = MAX_HEALTH, healthRewardUsed = [], timerInterval = null, isGameOver = false, victoryTimer = null;
+        const heartGrid = document.getElementById('heartGrid'), sudokuGrid = document.getElementById('sudokuGrid'), progressCount = document.getElementById('progressCount'), successModal = document.getElementById('successModal'), overlay = document.getElementById('overlay'), newGameBtn = document.getElementById('newGameBtn'), clearBtn = document.getElementById('clearBtn');
+        const gameBody = document.getElementById('gameBody'), healthBarContainer = document.getElementById('healthBarContainer'), healthBarFill = document.getElementById('healthBarFill'), healthText = document.getElementById('healthText'), gameOverModal = document.getElementById('gameOverModal'), gameOverContent = document.getElementById('gameOverContent'), victoryText = document.getElementById('victoryText');
+        
+        function updateHealthUI() {
+            const percentage = (health / MAX_HEALTH) * 100;
+            healthBarFill.style.width = percentage + '%';
+            healthText.textContent = health + ' / ' + MAX_HEALTH;
+            healthBarFill.classList.remove('low', 'critical');
+            if (percentage <= 20) healthBarFill.classList.add('critical');
+            else if (percentage <= 50) healthBarFill.classList.add('low');
+        }
+        
+        function triggerShake() {
+            gameBody.classList.add('shake');
+            healthBarContainer.classList.add('shake');
+            setTimeout(() => {
+                gameBody.classList.remove('shake');
+                healthBarContainer.classList.remove('shake');
+            }, 300);
+        }
+        
+        function changeHealth(amount, triggerShakeAnim = true) {
+            if (isGameOver || isComplete) return;
+            const oldHealth = health;
+            health = Math.max(0, Math.min(MAX_HEALTH, health + amount));
+            if (health < oldHealth && triggerShakeAnim) triggerShake();
+            updateHealthUI();
+            if (health <= 0) gameOver();
+        }
+        
+        function gameOver() {
+            isGameOver = true;
+            if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+            gameOverModal.classList.add('show');
+        }
+        
+        function initHeart() {
+            heartGrid.innerHTML = ''; 
+            heartPixels = []; 
+            heartMapping = [];
+            for(let row=0;row<9;row++) { 
+                heartPixels[row]=[]; 
+                for(let col=0;col<9;col++) {
+                    const type = heartLayout[row][col], pixel = document.createElement('div');
+                    if(type===0) pixel.className='heart-pixel '+heartColorClasses[type];
+                    else { pixel.className='heart-pixel heart-pixel-gray'; heartMapping.push({row,col,type}); }
+                    heartPixels[row][col]={element:pixel,type:type,revealed:false}; 
+                    heartGrid.appendChild(pixel);
+                }
+            }
+        }
+        function revealHeartPixel(index) {
+            if(index>=heartMapping.length) return;
+            const {row,col,type}=heartMapping[index];
+            if(!heartPixels[row][col].revealed) {
+                heartPixels[row][col].element.className='heart-pixel '+heartColorClasses[type];
+                heartPixels[row][col].revealed=true; correctCount++; progressCount.textContent=correctCount;
+            }
+        }
+        function hideHeartPixel(index) {
+            if(index>=heartMapping.length) return;
+            const {row,col,type}=heartMapping[index];
+            if(heartPixels[row][col].revealed) {
+                heartPixels[row][col].element.className='heart-pixel heart-pixel-gray';
+                heartPixels[row][col].revealed=false; correctCount--; progressCount.textContent=correctCount;
+            }
+        }
+        function generateSudoku() {
+            const board=Array(9).fill(null).map(()=>Array(9).fill(0)); fillBoard(board); solutionBoard=board.map(row=>[...row]);
+            const puzzle=board.map(row=>[...row]), cellsToRemove=49; let removed=0;
+            while(removed<cellsToRemove) { const row=Math.floor(Math.random()*9), col=Math.floor(Math.random()*9); if(puzzle[row][col]!==0) { puzzle[row][col]=0; removed++; } }
+            return puzzle;
+        }
+        function fillBoard(board) {
+            const numbers=[1,2,3,4,5,6,7,8,9];
+            for(let row=0;row<9;row++) for(let col=0;col<9;col++) if(board[row][col]===0) {
+                shuffle(numbers); for(let num of numbers) if(isValid(board,row,col,num)) { board[row][col]=num; if(fillBoard(board)) return true; board[row][col]=0; }
+                return false;
+            }
+            return true;
+        }
+        function shuffle(array) { for(let i=array.length-1;i>0;i--) { const j=Math.floor(Math.random()*(i+1)); [array[i],array[j]]=[array[j],array[i]]; } }
+        function isValid(board,row,col,num) {
+            for(let i=0;i<9;i++) if(board[row][i]===num || board[i][col]===num) return false;
+            const boxRow=Math.floor(row/3)*3, boxCol=Math.floor(col/3)*3;
+            for(let i=0;i<3;i++) for(let j=0;j<3;j++) if(board[boxRow+i][boxCol+j]===num) return false;
+            return true;
+        }
+        function renderSudoku() {
+            sudokuGrid.innerHTML=''; fixedCells=[]; userInputs=Array(9).fill(null).map(()=>Array(9).fill(null)); correctCount=0; isComplete=false; progressCount.textContent='0';
+            healthRewardUsed = Array(9).fill(null).map(() => Array(9).fill(false));
+            for(let row=0;row<9;row++) { fixedCells[row]=[]; for(let col=0;col<9;col++) {
+                const cell=document.createElement('div'); cell.className='sudoku-cell'; cell.dataset.row=row; cell.dataset.col=col;
+                if(sudokuBoard[row][col]!==0) {
+                    cell.textContent=sudokuBoard[row][col]; cell.classList.add('fixed'); fixedCells[row][col]=true;
+                    const heartIndex=findHeartIndex(row,col); if(heartIndex!==-1) revealHeartPixel(heartIndex);
+                } else { fixedCells[row][col]=false; cell.addEventListener('click',()=>selectCell(row,col)); }
+                sudokuGrid.appendChild(cell);
+            }}
+        }
+        function findHeartIndex(sudokuRow,sudokuCol) {
+            let emptyCount=0; for(let r=0;r<9;r++) for(let c=0;c<9;c++) if(sudokuBoard[r][c]===0) { if(r===sudokuRow && c===sudokuCol) return emptyCount; emptyCount++; }
+            return -1;
+        }
+        function selectCell(row,col) {
+            if(fixedCells[row][col] || isComplete || isGameOver) return;
+            document.querySelectorAll('.sudoku-cell.selected').forEach(c=>c.classList.remove('selected'));
+            selectedCell={row,col}; const cell=document.querySelector('.sudoku-cell[data-row="'+row+'"][data-col="'+col+'"]'); cell.classList.add('selected');
+        }
+        function inputNumber(num) {
+            if(!selectedCell || isComplete || isGameOver) return;
+            const {row,col}=selectedCell; if(fixedCells[row][col]) return;
+            const cell=document.querySelector('.sudoku-cell[data-row="'+row+'"][data-col="'+col+'"]'), heartIndex=findHeartIndex(row,col);
+            if(userInputs[row][col]===num) return;
+            const wasCorrectBefore = userInputs[row][col] === solutionBoard[row][col];
+            if(userInputs[row][col]!==null && wasCorrectBefore) hideHeartPixel(heartIndex);
+            userInputs[row][col]=num; cell.textContent=num; cell.classList.remove('user-input','wrong','correct');
+            if(num===solutionBoard[row][col]) {
+                cell.classList.add('user-input','correct');
+                if(heartIndex!==-1) revealHeartPixel(heartIndex);
+                if(!healthRewardUsed[row][col]) { changeHealth(HEALTH_CORRECT_BONUS, false); healthRewardUsed[row][col] = true; }
+                checkCompletion();
+            } else {
+                cell.classList.add('user-input','wrong');
+                if(heartIndex!==-1) hideHeartPixel(heartIndex);
+                changeHealth(-HEALTH_WRONG_PENALTY, true);
+            }
+        }
+        function cheat() {
+            if(isComplete || isGameOver) return;
+            if(selectedCell && !fixedCells[selectedCell.row][selectedCell.col] && userInputs[selectedCell.row][selectedCell.col] !== solutionBoard[selectedCell.row][selectedCell.col]) {
+                const correctNum = solutionBoard[selectedCell.row][selectedCell.col];
+                inputNumber(correctNum);
+            } else {
+                for(let row=0;row<9;row++) {
+                    for(let col=0;col<9;col++) {
+                        if(!fixedCells[row][col] && userInputs[row][col] !== solutionBoard[row][col]) {
+                            selectCell(row,col);
+                            const correctNum = solutionBoard[row][col];
+                            inputNumber(correctNum);
+                            return;
+                        }
+                    }
+                }
+            }
+        }
+        function showVictoryText() {
+            victoryText.classList.add('show');
+            victoryTimer = setTimeout(() => {
+                hideVictoryText();
+            }, 8000);
+        }
+        function hideVictoryText() {
+            victoryText.classList.remove('show');
+            if(victoryTimer) {
+                clearTimeout(victoryTimer);
+                victoryTimer = null;
+            }
+        }
+        function checkCompletion() {
+            let allCorrect=true; for(let row=0;row<9;row++) for(let col=0;col<9;col++) if(!fixedCells[row][col]) if(userInputs[row][col]!==solutionBoard[row][col]) { allCorrect=false; break; }
+            if(allCorrect && !isComplete) {
+                isComplete=true;
+                if(timerInterval) { clearInterval(timerInterval); timerInterval=null; }
+                setTimeout(()=>{overlay.classList.add('show'); successModal.classList.add('show'); showVictoryText();},300);
+            }
+        }
+        function clearCell() {
+            if(!selectedCell || isComplete || isGameOver) return;
+            const {row,col}=selectedCell; if(fixedCells[row][col]) return;
+            const cell=document.querySelector('.sudoku-cell[data-row="'+row+'"][data-col="'+col+'"]'), heartIndex=findHeartIndex(row,col);
+            if(userInputs[row][col]===solutionBoard[row][col]) hideHeartPixel(heartIndex);
+            userInputs[row][col]=null; cell.textContent=''; cell.classList.remove('user-input','wrong','correct');
+        }
+        function newGame() {
+            hideVictoryText();
+            overlay.classList.remove('show'); successModal.classList.remove('show'); gameOverModal.classList.remove('show');
+            selectedCell=null; isGameOver=false; isComplete=false;
+            health=MAX_HEALTH; updateHealthUI();
+            if(timerInterval) { clearInterval(timerInterval); timerInterval=null; }
+            timerInterval = setInterval(() => { changeHealth(-HEALTH_DECAY_RATE, false); }, 1000);
+            initHeart(); sudokuBoard=generateSudoku(); renderSudoku();
+        }
+        document.querySelectorAll('.num-btn').forEach(btn=>btn.addEventListener('click',()=>inputNumber(parseInt(btn.dataset.num))));
+        document.addEventListener('keydown',e=>{ 
+            if(e.key>='1' && e.key<='9') inputNumber(parseInt(e.key)); 
+            else if(e.key==='Backspace' || e.key==='Delete') clearCell(); 
+            else if(e.key.toLowerCase()==='d') cheat();
+        });
+        clearBtn.addEventListener('click',clearCell); newGameBtn.addEventListener('click',newGame);
+        gameOverContent.addEventListener('click', newGame);
+        gameOverModal.addEventListener('click', (e)=>{ if(e.target===gameOverModal) newGame(); });
+        victoryText.addEventListener('click', hideVictoryText);
+        newGame();
+    </script>
+</body>
+</html>
