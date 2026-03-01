@@ -217,7 +217,7 @@
     <div class="health-bar-container" id="healthBarContainer">
         <div class="health-bar-label">
             <span>❤️ 生命值</span>
-            <span id="healthText">300 / 300</span>
+            <span id="healthText">500 / 500</span>
         </div>
         <div class="health-bar-bg">
             <div class="health-bar-fill" id="healthBarFill"></div>
@@ -256,7 +256,7 @@
             [0,0,1,2,3,2,1,0,0], [0,0,0,1,2,1,0,0,0], [0,0,0,0,1,0,0,0,0]
         ];
         const heartColorClasses = {0:'heart-pixel-empty',1:'heart-pixel-pink-dark',2:'heart-pixel-pink-main',3:'heart-pixel-pink-light',4:'heart-pixel-white'};
-        const MAX_HEALTH = 300;
+        const MAX_HEALTH = 500;
         const HEALTH_WRONG_PENALTY = 10;
         const HEALTH_CORRECT_BONUS = 5;
         const HEALTH_DECAY_RATE = 1;
@@ -281,7 +281,7 @@
             setTimeout(() => {
                 gameBody.classList.remove('shake');
                 healthBarContainer.classList.remove('shake');
-            }, 300);
+            }, 500);
         }
         
         function changeHealth(amount, triggerShakeAnim = true) {
@@ -427,7 +427,7 @@
             if(allCorrect && !isComplete) {
                 isComplete=true;
                 if(timerInterval) { clearInterval(timerInterval); timerInterval=null; }
-                setTimeout(()=>{overlay.classList.add('show'); successModal.classList.add('show'); showVictoryText();},300);
+                setTimeout(()=>{overlay.classList.add('show'); successModal.classList.add('show'); showVictoryText();},500);
             }
         }
         function clearCell() {
